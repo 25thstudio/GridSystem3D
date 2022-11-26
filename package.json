@@ -1,0 +1,24 @@
+{
+    "name": "com.the25thstudio.gridsystem3d",
+    "version": "1.0.0",
+    "displayName": "The 25th Studio - Grid System 3D",
+    "description": "Unity 3D Grid System 3D",
+    "unity": "2019.1",
+    "unityRelease": "0b5",
+    "keywords": [
+      "Grid System 3D"
+    ],
+    "author": {
+      "name": "The 25th Studio",
+      "email": "paulo.sigrist@gmail.com",
+      "url": "https://github.com/25thstudio/GridSystem3D"
+    },
+    "type": "library",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/25thstudio/GridSystem3D.git"
+    },
+    "publishConfig": {
+      "registry": "https://npm.pkg.github.com/@25thstudio"
+    }
+  }
