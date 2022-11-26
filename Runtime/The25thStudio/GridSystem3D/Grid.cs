@@ -93,7 +93,7 @@ namespace The25thStudio.GridSystem3D
 
         #region Editor Methods
 #if UNITY_EDITOR
-        public static void DrawGizmos(Vector3 position, GridSettings settings, Color color)
+        public static void DrawGizmos(GridSettings settings, Vector3 position, Color color)
         {
             Gizmos.color = color;
 
@@ -112,7 +112,7 @@ namespace The25thStudio.GridSystem3D
 
         }
 
-        public static void OnValidate(BoxCollider collider, GridSettings settings)
+        public static void OnValidate(GridSettings settings, BoxCollider collider)
         {
             var offset = settings.Offset();
             var size = new Vector3(settings.Width, settings.Height);
