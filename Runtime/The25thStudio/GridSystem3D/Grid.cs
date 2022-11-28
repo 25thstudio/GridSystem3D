@@ -56,15 +56,51 @@ namespace The25thStudio.GridSystem3D
 
         #region Position
         public bool IsEmpty(int x, int y)
-        {
-            if (IsValidPosition(x, y))
+        {            
+            return IsEmpty(x, y, 1, 1);
+        }
+
+        public bool IsEmpty(int x, int y, int width, int height)
+        {            
+            for (var w = 0; w < width; w++)
             {
-                var value = _gridArray[x, y];
-                return IsNullValue(value);
+                for (var h = 0; h < height; h++)
+                {
+                    var xw = x + w;
+                    var yh = y + h;
+                    if (IsValidPosition(xw, yh)) {
+                        var value = _gridArray[xw, yh];
+                        if (!IsNullValue(value)) return false;
+                    } else
+                    {
+                        return false;
+                    }
+                    
+                    
+                }
             }
             return true;
         }
 
+        public bool IsEmpty(Vector3 worldPosition)
+        {
+            return IsEmpty(worldPosition, 1, 1);
+            
+        }
+
+        public bool IsEmpty(Vector3 worldPosition, int width, int height)
+        {
+            return IsEmpty(worldPosition, width, height, out _, out _);
+        }
+
+        public bool IsEmpty(Vector3 worldPosition, int width, int height, out int x, out int y)
+        {
+            if (GetXY(worldPosition, out x, out y))
+            {
+                return IsEmpty(x, y, width, height);
+            }
+            return false;
+        }
 
         public Vector3 GetWorldPosition(int x, int y)
         {            
@@ -89,23 +125,46 @@ namespace The25thStudio.GridSystem3D
             return EqualityComparer<T>.Default.Equals(value, default);
         }
 
-        public void SetValue(int x, int y, T value)
-        {
-            if (IsValidPosition(x,y))
-            {
-                _gridArray[x, y] = value;
-                // Invoke the set value event
-                _setValueEvent.Invoke(x, y, value);
-            }
+        public bool SetValue(int x, int y, T value)
+        {            
+            return SetValue(x, y, 1, 1, value);
         }
 
-        public void SetValue(Vector3 worldPosition, T value)
-        {            
-            if (GetXY(worldPosition, out int x, out int y))
+        public bool SetValue(int x, int y, int width, int height, T value)
+        {
+            if (IsEmpty(x, y, width, height))
             {
-                SetValue(x, y, value);
+                for (var w = 0; w < width; w++)
+                {
+                    for (var h = 0; h < height; h++)
+                    {
+                        _gridArray[x + w, y + h] = value;
+                    }
+                }
+                
+                // Invoke the set value event
+                _setValueEvent.Invoke(x, y, value);
+                return true;
             }
+            return false;
         }
+
+
+        public bool SetValue(Vector3 worldPosition, T value)
+        {   
+            return SetValue(worldPosition, value, out _, out _);
+        }
+
+        public bool SetValue(Vector3 worldPosition, T value, out int x, out int y)
+        {
+            if (GetXY(worldPosition, out x, out y))
+            {
+                return SetValue(x, y, value);
+            }
+            return false;
+        }
+
+
 
 
         public T GetValue(int x, int y)
