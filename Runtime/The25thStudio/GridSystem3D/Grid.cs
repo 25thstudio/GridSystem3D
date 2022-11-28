@@ -1,22 +1,23 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace The25thStudio.GridSystem3D
 {
-    public class Grid<TGridObject>
+    public class Grid<T>
     {
         private readonly GridSettings _settings;
         private readonly Vector3 _originPosition;        
-        private readonly TGridObject[,] _gridArray;
-        private readonly UnityEvent<int, int, TGridObject> _setValueEvent;
+        private readonly T[,] _gridArray;
+        private readonly UnityEvent<int, int, T> _setValueEvent;
 
-        public Grid(GridSettings settings, Vector3 originPosition, Func<int, int, TGridObject> initializeGrid = default)
+        public Grid(GridSettings settings, Vector3 originPosition, Func<int, int, T> initializeGrid = default)
         {
             this._settings = settings;            
             this._originPosition = originPosition;
-            this._gridArray = new TGridObject[_settings.Width, _settings.Height];
-            this._setValueEvent = new UnityEvent<int, int, TGridObject>();
+            this._gridArray = new T[_settings.Width, _settings.Height];
+            this._setValueEvent = new UnityEvent<int, int, T>();
 
 
             if (initializeGrid != default) 
@@ -26,25 +27,26 @@ namespace The25thStudio.GridSystem3D
             
         }
 
-        private void InitializeGridArray(Func<int, int, TGridObject> createGridObject)
+        private void InitializeGridArray(Func<int, int, T> createGridObject = default)
         {
+            bool validFunction = createGridObject != default;
             for(var x = 0; x < _settings.Width; x++)
             {
                 for (var y = 0; y < _settings.Height; y++)
                 {
-                    _gridArray[x,y] = createGridObject(x, y);
+                    _gridArray[x,y] = validFunction ? createGridObject(x, y) : default;
                 }
             }
         }
 
         #region Listeners
-        public void AddListener(UnityAction<int, int, TGridObject> action)
+        public void AddListener(UnityAction<int, int, T> action)
         {
             _setValueEvent.AddListener(action);
         }
 
 
-        public void RemoveListener(UnityAction<int, int, TGridObject> action)
+        public void RemoveListener(UnityAction<int, int, T> action)
         {
             _setValueEvent.RemoveListener(action);
         }
@@ -53,6 +55,16 @@ namespace The25thStudio.GridSystem3D
 
 
         #region Position
+        public bool IsEmpty(int x, int y)
+        {
+            if (IsValidPosition(x, y))
+            {
+                var value = _gridArray[x, y];
+                return IsNullValue(value);
+            }
+            return true;
+        }
+
 
         public Vector3 GetWorldPosition(int x, int y)
         {            
@@ -72,8 +84,12 @@ namespace The25thStudio.GridSystem3D
         #endregion
 
         #region Value
+        private bool IsNullValue(T value)
+        {
+            return EqualityComparer<T>.Default.Equals(value, default);
+        }
 
-        public void SetValue(int x, int y, TGridObject value)
+        public void SetValue(int x, int y, T value)
         {
             if (IsValidPosition(x,y))
             {
@@ -83,7 +99,7 @@ namespace The25thStudio.GridSystem3D
             }
         }
 
-        public void SetValue(Vector3 worldPosition, TGridObject value)
+        public void SetValue(Vector3 worldPosition, T value)
         {            
             if (GetXY(worldPosition, out int x, out int y))
             {
@@ -92,7 +108,7 @@ namespace The25thStudio.GridSystem3D
         }
 
 
-        public TGridObject GetValue(int x, int y)
+        public T GetValue(int x, int y)
         {
             if (IsValidPosition(x, y))
             {
@@ -101,7 +117,7 @@ namespace The25thStudio.GridSystem3D
             return default;
         }
 
-        public TGridObject GetValue(Vector3 worldPosition)
+        public T GetValue(Vector3 worldPosition)
         {
             if (GetXY(worldPosition, out int x, out int y))
             {
@@ -109,6 +125,31 @@ namespace The25thStudio.GridSystem3D
             }
             return default;
             
+        }
+
+        public bool RemoveValue(int x, int y, out T value)
+        {
+            if (IsValidPosition(x, y))
+            {
+                value = _gridArray[x, y];
+                if (!IsNullValue(value))
+                {
+                    _gridArray[x, y] = default;
+                    return true;
+                }
+            }
+            value = default;
+            return false;
+        }
+
+        public bool RemoveValue(Vector3 worldPosition, out T value)
+        {
+            if (GetXY(worldPosition, out var x, out var y))
+            {
+                return RemoveValue(x, y, out value);                
+            }
+            value = default;
+            return false;
         }
 
         #endregion
