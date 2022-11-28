@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace The25thStudio.GridSystem3D
 {
@@ -8,13 +9,16 @@ namespace The25thStudio.GridSystem3D
         private readonly GridSettings _settings;
         private readonly Vector3 _originPosition;        
         private readonly TGridObject[,] _gridArray;
+        private readonly UnityEvent<int, int, TGridObject> _setValueEvent;
 
         public Grid(GridSettings settings, Vector3 originPosition, Func<int, int, TGridObject> initializeGrid = default)
         {
             this._settings = settings;            
             this._originPosition = originPosition;
             this._gridArray = new TGridObject[_settings.Width, _settings.Height];
-            
+            this._setValueEvent = new UnityEvent<int, int, TGridObject>();
+
+
             if (initializeGrid != default) 
             {
                 InitializeGridArray(initializeGrid);
@@ -32,6 +36,22 @@ namespace The25thStudio.GridSystem3D
                 }
             }
         }
+
+        #region Listeners
+        public void AddListener(UnityAction<int, int, TGridObject> action)
+        {
+            _setValueEvent.AddListener(action);
+        }
+
+
+        public void RemoveListener(UnityAction<int, int, TGridObject> action)
+        {
+            _setValueEvent.RemoveListener(action);
+        }
+
+        #endregion
+
+
         #region Position
 
         public Vector3 GetWorldPosition(int x, int y)
@@ -58,6 +78,8 @@ namespace The25thStudio.GridSystem3D
             if (IsValidPosition(x,y))
             {
                 _gridArray[x, y] = value;
+                // Invoke the set value event
+                _setValueEvent.Invoke(x, y, value);
             }
         }
 
@@ -92,7 +114,7 @@ namespace The25thStudio.GridSystem3D
         #endregion
 
         #region Editor Methods
-#if UNITY_EDITOR
+
         public static void DrawGizmos(GridSettings settings, Vector3 position, Color color)
         {
             Gizmos.color = color;
@@ -120,7 +142,7 @@ namespace The25thStudio.GridSystem3D
             collider.center = settings.GridOrientation.Translate(center - offset);
             collider.size = settings.GridOrientation.Translate(size) * settings.CellSize;
         }
-#endif
+
         #endregion
 
     }
