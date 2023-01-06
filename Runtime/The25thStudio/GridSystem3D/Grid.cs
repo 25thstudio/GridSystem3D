@@ -11,6 +11,8 @@ namespace The25thStudio.GridSystem3D
         private readonly GridCell<T>[,] _gridArray;
         private readonly UnityEvent<int, int, T> _setValueEvent;
 
+        private int _count = 0;
+
         public Grid(GridSettings settings, Vector3 originPosition, Func<int, int, T> initializeGrid = default)
         {
             this._settings = settings;
@@ -154,6 +156,7 @@ namespace The25thStudio.GridSystem3D
             {
                 var parent = _gridArray[x, y];
                 ProcessGrid(x, y, width, height, (xw, yh) => SetValueOrParent(x, y, xw, yh, width, height, value, parent));
+                IncreaseCount();
 
                 // Invoke the set value event
                 _setValueEvent.Invoke(x, y, value);
@@ -228,7 +231,12 @@ namespace The25thStudio.GridSystem3D
             if (IsValidPosition(x, y))
             {
                 var cell = _gridArray[x, y];
-                return cell.RemoveValue(out value);
+                var removed = cell.RemoveValue(out value);
+                if (removed) {
+                    DecreaseCount();
+                }
+
+                return removed;
 
             }
             value = default;
@@ -312,6 +320,22 @@ namespace The25thStudio.GridSystem3D
                 }
             }
 
+        }
+
+        private void DecreaseCount() {
+            _count--;
+            if (_count < 0) {
+                _count = 0;
+            }
+        }
+
+        private void IncreaseCount() {
+            _count++;
+        }
+
+        public int Count()
+        {
+            return _count;
         }
 
     }
