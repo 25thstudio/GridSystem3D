@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -60,29 +59,24 @@ namespace The25thStudio.GridSystem3D
 
         public bool IsEmpty(int x, int y, int width, int height)
         {
-            for (var w = 0; w < width; w++)
+            var isEmpty = true;
+            ProcessGrid(x, y, width, height, (xw, yh) =>
             {
-                for (var h = 0; h < height; h++)
+                if (IsValidPosition(xw, yh))
                 {
-                    var xw = x + w;
-                    var yh = y + h;
-                    if (IsValidPosition(xw, yh))
+                    var value = _gridArray[xw, yh];
+                    if (!value.IsEmpty())
                     {
-                        var value = _gridArray[xw, yh];                        
-                        if (!value.IsEmpty())
-                        {
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                        isEmpty = false;
 
-
+                    }
+                } else {
+                    isEmpty = false;
                 }
-            }
-            return true;
+
+            });
+            return isEmpty;
+
         }
 
         public bool IsEmpty(Vector3 worldPosition)
@@ -105,7 +99,7 @@ namespace The25thStudio.GridSystem3D
             return false;
         }
 
-        public Vector3 GetWorldPosition(int x, int y)
+        public Vector3 GetWorldPosition(int x, int y, int width = 1, int height = 1)
         {
             return _settings.GetWorldPosition(_originPosition, x, y);
         }
@@ -123,6 +117,32 @@ namespace The25thStudio.GridSystem3D
         #endregion
 
         #region Value
+        private void GetStartXY(int x, int y, int width, int height, out int startX, out int startY)
+        {
+            if (width > 0)
+            {
+                // If width is positive, startX starts from left to right
+                startX = 1 + Mathf.FloorToInt(x - Mathf.Abs(width) * 0.4f);
+            }
+            else
+            {
+                // If width is negative, startX starts from right to left
+                startX = Mathf.FloorToInt(x + Mathf.Abs(width) * 0.4f);
+            }
+
+            if (height > 0)
+            {
+                // If height is positive, startY starts from bottom to top
+                startY = 1 + Mathf.FloorToInt(y - Mathf.Abs(height) * 0.4f);
+            }
+            else
+            {
+                // If height is negative, startY starts from top to bottom
+                startY = Mathf.FloorToInt(y + Mathf.Abs(height) * 0.4f);
+            }
+
+        }
+
         public bool SetValue(int x, int y, T value)
         {
             return SetValue(x, y, 1, 1, value);
@@ -133,31 +153,27 @@ namespace The25thStudio.GridSystem3D
             if (IsEmpty(x, y, width, height))
             {
                 var parent = _gridArray[x, y];
-                for (var w = 0; w < width; w++)
-                {
-                    for (var h = 0; h < height; h++)
-                    {
-                        var xw = x + w;
-                        var yh = y + h;
-
-                        if (xw == x && yh == y)
-                        {
-                            // The parent
-                            _gridArray[xw, yh].SetValue(value, width, height);                            
-                        }
-                        else
-                        {
-                            _gridArray[xw, yh].SetParent(parent);                            
-                        }
-                        
-                    }
-                }
+                ProcessGrid(x, y, width, height, (xw, yh) => SetValueOrParent(x, y, xw, yh, width, height, value, parent));
 
                 // Invoke the set value event
                 _setValueEvent.Invoke(x, y, value);
                 return true;
+
             }
             return false;
+        }
+
+        private void SetValueOrParent(int parentX, int parentY, int x, int y, int width, int height, T value, GridCell<T> parent)
+        {
+            if (x == parentX && y == parentY)
+            {
+                // The parent
+                _gridArray[x, y].SetValue(value, width, height);
+            }
+            else
+            {
+                _gridArray[x, y].SetParent(parent);
+            }
         }
 
 
@@ -213,13 +229,7 @@ namespace The25thStudio.GridSystem3D
             {
                 var cell = _gridArray[x, y];
                 return cell.RemoveValue(out value);
-                /*
-                if (!IsNullValue(value))
-                {
-                    _gridArray[x, y] = default;
-                    return true;
-                }
-                */
+
             }
             value = default;
             return false;
@@ -235,14 +245,30 @@ namespace The25thStudio.GridSystem3D
             return false;
         }
 
+        public GridSettings Settings => _settings;
         #endregion
 
         #region Editor Methods
 
+        public void DrawGizmos(Vector3 position, Color color)
+        {
+            var gridSize = _settings.GridSize;
+            var wireCellSize = _settings.WireCellSize();
+
+            for (var x = 0; x < gridSize.x; x++)
+            {
+                for (var y = 0; y < gridSize.y; y++)
+                {
+                    Gizmos.color = color;
+                    var p = _settings.GetWorldPosition(position, x, y);
+                    _gridArray[x, y].DrawGizmos(p, wireCellSize);
+                }
+            }
+        }
+
         public static void DrawGizmos(GridSettings settings, Vector3 position, Color color)
         {
             Gizmos.color = color;
-
 
             var gridSize = settings.GridSize;
             var wireCellSize = settings.WireCellSize();
@@ -251,6 +277,7 @@ namespace The25thStudio.GridSystem3D
             {
                 for (var y = 0; y < gridSize.y; y++)
                 {
+
                     var p = settings.GetWorldPosition(position, x, y);
                     Gizmos.DrawWireCube(p, wireCellSize);
                 }
@@ -268,6 +295,24 @@ namespace The25thStudio.GridSystem3D
         }
 
         #endregion
+
+        private void ProcessGrid(int x, int y, int width, int height, Action<int, int> action)
+        {
+            GetStartXY(x, y, width, height, out var startX, out var startY);
+            var absWidth = Math.Abs(width);
+            var absHeight = Math.Abs(height);
+            for (var w = 0; w < absWidth; w++)
+            {
+                for (var h = 0; h < absHeight; h++)
+                {
+                    int xw = width > 0 ? startX + w : startX - w;
+                    int yh = height > 0 ? startY + h : startY - h;
+
+                    action(xw, yh);
+                }
+            }
+
+        }
 
     }
 

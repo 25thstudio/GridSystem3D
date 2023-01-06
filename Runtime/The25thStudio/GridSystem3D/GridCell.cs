@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 
 
 namespace The25thStudio.GridSystem3D
@@ -79,6 +80,21 @@ namespace The25thStudio.GridSystem3D
         private bool HasParent()
         {
             return _parent != default;
+        }
+
+        public void DrawGizmos(Vector3 position, Vector3 size) 
+        {            
+            if (IsEmpty()) {
+                Gizmos.DrawWireCube(position, size);
+            } else {
+                if (HasParent())
+                    Gizmos.color = Color.green;
+                else
+                    Gizmos.color = Color.blue;
+                Gizmos.DrawCube(position, size);
+            }
+                
+            
         }
     }
 }
